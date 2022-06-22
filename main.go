@@ -46,6 +46,7 @@ func main() {
 	connectDB(":5432", "postgres", "password", "postgres")
 
 	for update := range updates {
+		// Действия с запросом на пост в канал
 		if update.CallbackQuery != nil {
 			switch update.CallbackQuery.Data {
 			case "post":
@@ -55,6 +56,7 @@ func main() {
 				rejectOrderResponse(config, update, bot)
 			}
 		}
+		// Взаимодействие юзера с постом
 		if update.Message != nil {
 			switch update.Message.Text {
 			case "/start": // TODO: Check if user in DB
