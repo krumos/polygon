@@ -45,6 +45,14 @@ func main() {
 
 	connectDB(":5432", "postgres", "password", "postgres")
 
+	userBotKeyboard := tgbotapi.NewReplyKeyboard(
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("/start"),
+		),
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("/new_order"),
+		),
+	)
 	for update := range updates {
 		// Действия с запросом на пост в канал
 		if update.CallbackQuery != nil {
@@ -60,8 +68,12 @@ func main() {
 		if update.Message != nil {
 			switch update.Message.Text {
 			case "/start": // TODO: Check if user in DB
+				msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
+				msg.ReplyMarkup = userBotKeyboard
 				startCommand(update, bot)
 			case "/new_order":
+				msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
+				msg.ReplyMarkup = userBotKeyboard
 				newOrderCommand(update, bot)
 			default:
 				// user := usersList[slices.IndexFunc(usersList, func(u UserData) bool { return u.id == update.Message.From.ID })]
