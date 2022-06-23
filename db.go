@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/go-pg/pg/v10"
 	"github.com/go-pg/pg/v10/orm"
 )
@@ -23,7 +25,7 @@ func connectDB(port string, username string, pword string, dbName string) {
 	for _, model := range models {
 		db.Model(model).CreateTable(&orm.CreateTableOptions{})
 	}
-	defer db.Close()
+	// defer db.Close()
 }
 
 // func processRequest(db *pg.DB) error {
@@ -56,34 +58,57 @@ func connectDB(port string, username string, pword string, dbName string) {
 // 	return nil
 // }
 
-func createUser(user UserData) {
-
+func createUser(user *UserData) {
+	fmt.Println(user.Id)
+	exists, _ := db.Model(user).Where("id=?", user.Id).Exists()
+	if !exists {
+		user.CustomerRating = 5
+		user.ExecutorRating = 5
+		db.Model(user).Insert()
+	}
 }
 
-func readUser(id int64) {
-
+func readUser(id int64) UserData {
+	user := new(UserData)
+	db.Model(user).Where("id=?", id).Select()
+	return *user
 }
 
-func updateUser(user UserData) {
-
+func updateUser(user *UserData) {
+	db.Model(user).Where("id=?", user.Id).Update()
 }
 
-func deleteUser(user UserData) {
-
+func deleteUser(user *UserData) {
+	db.Model(user).Where("id=?", user.Id).Delete()
 }
 
-func createOrder(order OrderData) {
-
+func createOrder(order *OrderData) {
+	exists, _ := db.Model(order).Where("id=?", order.Id).Exists()
+	if !exists {
+		db.Model(order).Insert()
+	}
 }
 
-func readOrder(id int64) {
-
+func readOrderById(orderId int64) OrderData {
+	order := new(OrderData)
+	db.Model(order).Where("id=?", orderId).Select()
+	return *order
 }
 
-func updateOrder(order OrderData) {
-
+func readOrderByState(customerId int64) (order *OrderData) {
+	order = new(OrderData)
+	db.Model(order).Where("customer_id=?", customerId).Where("state=?", TitleOrderState).
+		WhereOr("state=?", DescriptionOrderState).
+		WhereOr("state=?", FilesOrderState).Select()
+	fmt.Println(order.CustomerId, order.State)
+	return order
 }
 
-func deleteOrder(order OrderData) {
+func updateOrder(order *OrderData) {
+	fmt.Println("Бипки")
+	db.Model(order).WherePK().Update()
+}
 
+func deleteOrder(order *OrderData) {
+	db.Model(order).WherePK().Delete()
 }

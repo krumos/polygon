@@ -3,9 +3,6 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
-
-	//"slices"
-	//"strings"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -32,7 +29,6 @@ func connectBot(token string) (bot *tgbotapi.BotAPI, updates tgbotapi.UpdatesCha
 }
 
 func main() {
-
 	config, err := getConfig()
 	if err != nil {
 		panic(err)
@@ -45,37 +41,53 @@ func main() {
 
 	connectDB(":5432", "postgres", "password", "postgres")
 
-	userBotKeyboard := tgbotapi.NewReplyKeyboard(
-		tgbotapi.NewKeyboardButtonRow(
-			tgbotapi.NewKeyboardButton("/start"),
-		),
-		tgbotapi.NewKeyboardButtonRow(
-			tgbotapi.NewKeyboardButton("/new_order"),
-		),
-	)
+	// userBotKeyboard := tgbotapi.NewReplyKeyboard(
+	// 	tgbotapi.NewKeyboardButtonRow(
+	// 		tgbotapi.NewKeyboardButton("/start"),
+	// 	),
+	// 	tgbotapi.NewKeyboardButtonRow(
+	// 		tgbotapi.NewKeyboardButton("/new_order"),
+	// 	),
+	// )
+
 	for update := range updates {
 		// Действия с запросом на пост в канал
 		if update.CallbackQuery != nil {
-			switch update.CallbackQuery.Data {
-			case "post":
-				approveOrderResponse(config, update, bot)
+			response := CallbackData{}
+			json.Unmarshal([]byte(update.CallbackQuery.Data), &response)
+			switch response.Type {
+			case Approve:
+				approveOrderResponse(config, update, bot, &response)
 				// TODO: Сделать уведомление юзера об отказе в посте
-			case "del":
-				rejectOrderResponse(config, update, bot)
+			case Reject:
+				rejectOrderResponse(config, update, bot, &response)
 			}
 		}
 		// Взаимодействие юзера с постом
 		if update.Message != nil {
 			switch update.Message.Text {
 			case "/start": // TODO: Check if user in DB
-				msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
-				msg.ReplyMarkup = userBotKeyboard
 				startCommand(update, bot)
 			case "/new_order":
-				msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
-				msg.ReplyMarkup = userBotKeyboard
 				newOrderCommand(update, bot)
 			default:
+				user := readUser(update.Message.From.ID)
+
+				switch user.State {
+				case MakingOrderUserState:
+					order := readOrderByState(user.Id)
+					switch order.State {
+					case TitleOrderState:
+						newHeaderOrderCommand(update, bot, &user, order)
+					case DescriptionOrderState:
+						newDescriptionrOrderCommand(update, bot, &user, order)
+					}
+
+				default:
+
+				}
+
+				//	bot.Send(tgbotapi.NewMessage(update.Message.From.ID, update.Message.Text))
 				// user := usersList[slices.IndexFunc(usersList, func(u UserData) bool { return u.id == update.Message.From.ID })]
 				// switch user.state {
 
@@ -88,12 +100,7 @@ func main() {
 				// }
 				// msg = tgbotapi.NewMessage(update.Message.From.ID, "я тебя не понимать")
 			}
-			// msg := tgbotapi.NewMessage(moderatorChat, update.Message.Text)
-			// 	btn := tgbotapi.NewInlineKeyboardMarkup(
-			// 		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Запостить", "post"),
-			// 			tgbotapi.NewInlineKeyboardButtonData("Удалить", "del")))
-			// 	msg.ReplyMarkup = btn
-			// 	bot.Send(msg)
+
 		}
 	}
 }

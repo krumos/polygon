@@ -1,33 +1,52 @@
 package main
 
-import (
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-)
+import tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
-type State int64
+type OrderState int64
 
 const (
-	title State = iota
-	description
-	files
-	posted
-	executed
+	TitleOrderState OrderState = iota + 1
+	DescriptionOrderState
+	FilesOrderState
+	ModeratedOrderState
+	PostedOrderState
+	ExecutedOrderState
 )
 
+type UserState int64
+
+const (
+	MakingOrderUserState UserState = iota + 1
+	DefaultUserState
+)
+
+type CallbackDataType int64
+
+const (
+	Approve CallbackDataType = iota + 1
+	Reject
+)
+
+type CallbackData struct {
+	Type CallbackDataType
+	Id 	 int64
+}
+
 type UserData struct {
-	id             int64   `pg:"id"`
-	customerRating float32 `pg:"customer_rating"`
-	executorRating float32 `pg:"executor_rating"`
+	Id             int64   `pg:"id,notnull"`
+	CustomerRating float32 `pg:"customer_rating,notnull"`
+	ExecutorRating float32 `pg:"executor_rating,notnull"`
+	State          UserState
 }
 
 type OrderData struct {
-	id          int64                `pg:"id"`
-	title       string               `pg:"title"`
-	description string               `pg:"description"`
-	files       []tgbotapi.FileBytes `pg:"files"` // TODO: How to store files
-	customerId  int64                `pg:"customer_id"`
-	executorId  int64                `pg:"executor_id"`
-	state       State                `pg:"state"`
+	Id          int64               `pg:"id,pk"`
+	Title       string              `pg:"title"`
+	Description string              `pg:"description"`
+	Files       []tgbotapi.Document `pg:"files"` // TODO: How to store files
+	CustomerId  int64               `pg:"customer_id,notnull"`
+	ExecutorId  int64               `pg:"executor_id"`
+	State       OrderState          `pg:"state,notnull"`
 }
 
 type Config struct {
