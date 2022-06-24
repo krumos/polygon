@@ -9,7 +9,7 @@ const (
 	DescriptionOrderState
 	FilesOrderState
 	ModeratedOrderState
-	PostedOrderState
+	ApprovedOrderState
 	ExecutedOrderState
 )
 
@@ -25,11 +25,12 @@ type CallbackDataType int64
 const (
 	Approve CallbackDataType = iota + 1
 	Reject
+	Agreement
 )
 
 type CallbackData struct {
 	Type CallbackDataType
-	Id 	 int64
+	Id   int64
 }
 
 type UserData struct {
@@ -47,6 +48,10 @@ type OrderData struct {
 	CustomerId  int64               `pg:"customer_id,notnull"`
 	ExecutorId  int64               `pg:"executor_id"`
 	State       OrderState          `pg:"state,notnull"`
+}
+
+func (order *OrderData) toString() string {
+	return " *" + order.Title + "* " + "\n\n" + order.Description
 }
 
 type Config struct {

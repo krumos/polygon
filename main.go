@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -29,6 +30,7 @@ func connectBot(token string) (bot *tgbotapi.BotAPI, updates tgbotapi.UpdatesCha
 }
 
 func main() {
+	getText("texts.yaml")
 	config, err := getConfig()
 	if err != nil {
 		panic(err)
@@ -61,14 +63,16 @@ func main() {
 				// TODO: Сделать уведомление юзера об отказе в посте
 			case Reject:
 				rejectOrderResponse(config, update, bot, &response)
+			case Agreement:
+				agreementOrderResponse(update, bot, &response)
 			}
 		}
 		// Взаимодействие юзера с постом
 		if update.Message != nil {
 			switch update.Message.Text {
-			case "/start": // TODO: Check if user in DB
+			case Texts["start_command"]: // TODO: Check if user in DB
 				startCommand(update, bot)
-			case "/new_order":
+			case Texts["new_order_command"]:
 				newOrderCommand(update, bot)
 			default:
 				user := readUser(update.Message.From.ID)

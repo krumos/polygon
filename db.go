@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/go-pg/pg/v10"
 	"github.com/go-pg/pg/v10/orm"
 )
@@ -59,7 +57,6 @@ func connectDB(port string, username string, pword string, dbName string) {
 // }
 
 func createUser(user *UserData) {
-	fmt.Println(user.Id)
 	exists, _ := db.Model(user).Where("id=?", user.Id).Exists()
 	if !exists {
 		user.CustomerRating = 5
@@ -100,12 +97,10 @@ func readOrderByState(customerId int64) (order *OrderData) {
 	db.Model(order).Where("customer_id=?", customerId).Where("state=?", TitleOrderState).
 		WhereOr("state=?", DescriptionOrderState).
 		WhereOr("state=?", FilesOrderState).Select()
-	fmt.Println(order.CustomerId, order.State)
 	return order
 }
 
 func updateOrder(order *OrderData) {
-	fmt.Println("Бипки")
 	db.Model(order).WherePK().Update()
 }
 
