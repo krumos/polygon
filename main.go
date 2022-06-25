@@ -59,7 +59,7 @@ func main() {
 			json.Unmarshal([]byte(update.CallbackQuery.Data), &response)
 			switch response.Type {
 			case Approve:
-				approveOrderResponse(config, update, bot, &response)
+				аpproveOrderResponse(config, update, bot, &response)
 				// TODO: Сделать уведомление юзера об отказе в посте
 			case Reject:
 				rejectOrderResponse(config, update, bot, &response)
@@ -86,7 +86,6 @@ func main() {
 					case DescriptionOrderState:
 						newDescriptionrOrderCommand(update, bot, &user, order)
 					}
-
 				default:
 
 				}

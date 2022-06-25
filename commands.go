@@ -6,60 +6,11 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func agreementOrderResponse(update tgbotapi.Update, bot *tgbotapi.BotAPI, response *CallbackData) {
-	order := readOrderById(response.Id)
-
-	//Можно откликнуться миллиард раз
-	msg := tgbotapi.NewMessage(order.CustomerId, Texts["agreed_order"])
-	btn := tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonURL(Texts["go_to_chat_button"], "https://t.me/" + update.CallbackQuery.From.UserName)))
-	msg.ReplyMarkup = btn
-	bot.Send(msg)
-}
-
-func approveOrderResponse(config *Config, update tgbotapi.Update, bot *tgbotapi.BotAPI, response *CallbackData) {
-	order := readOrderById(response.Id)
-	order.State = ApprovedOrderState
-
-	updateOrder(&order)
-	agreementData := CallbackData{
-		Type: Agreement,
-		Id:   order.Id,
-	} // , json.Unmarshall()
-	agreementDataJson, _ := json.Marshal(agreementData)
-
-	msg := tgbotapi.NewMessage(config.ChannelChat, order.toString())
-	btn := tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(Texts["respond_order"], string(agreementDataJson))))
-	msg.ReplyMarkup = btn
-	msg.ParseMode = tgbotapi.ModeMarkdown
-	bot.Send(msg)
-
-	msg = tgbotapi.NewMessage(order.CustomerId, Texts["status_sent"])
-	bot.Send(msg)
-
-	msgRej := tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID)
-	bot.Send(msgRej)
-}
-
-func rejectOrderResponse(config *Config, update tgbotapi.Update, bot *tgbotapi.BotAPI, response *CallbackData) {
-	order := readOrderById(response.Id)
-	order.State = ApprovedOrderState
-
-	updateOrder(&order)
-
-	msg := tgbotapi.NewMessage(order.CustomerId, Texts["status_rejected"])
-	bot.Send(msg)
-
-	msg2 := tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID)
-	bot.Send(msg2)
-}
-
 func startCommand(update tgbotapi.Update, bot *tgbotapi.BotAPI) {
 	user := UserData{Id: update.Message.From.ID}
 	createUser(&user)
 
-	msg := tgbotapi.NewMessage(update.Message.From.ID, Texts["hello"])
+	msg := tgbotapi.NewMessage(update.Message.From.ID, Texts["start_command_answer"])
 	bot.Send(msg)
 }
 
@@ -71,7 +22,7 @@ func newOrderCommand(update tgbotapi.Update, bot *tgbotapi.BotAPI) {
 	order := OrderData{CustomerId: user.Id, State: TitleOrderState}
 	createOrder(&order)
 
-	msg := tgbotapi.NewMessage(user.Id, Texts["header_notifier"])
+	msg := tgbotapi.NewMessage(user.Id, Texts["new_order_command_answer"])
 	bot.Send(msg)
 }
 
@@ -80,7 +31,7 @@ func newHeaderOrderCommand(update tgbotapi.Update, bot *tgbotapi.BotAPI, user *U
 	order.State = DescriptionOrderState
 	updateOrder(order)
 
-	msg := tgbotapi.NewMessage(update.Message.From.ID, Texts["description_notifier"])
+	msg := tgbotapi.NewMessage(update.Message.From.ID, Texts["new_header_command_an"])
 	bot.Send(msg)
 }
 
@@ -92,7 +43,7 @@ func newDescriptionrOrderCommand(update tgbotapi.Update, bot *tgbotapi.BotAPI, u
 	order.State = ModeratedOrderState
 	updateOrder(order)
 
-	msg := tgbotapi.NewMessage(update.Message.From.ID, Texts["status_moderating"])
+	msg := tgbotapi.NewMessage(update.Message.From.ID, Texts["order_created_command_an"])
 	bot.Send(msg)
 
 	config, _ := getConfig()
