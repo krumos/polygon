@@ -6,7 +6,21 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func agreementOrderResponse(update tgbotapi.Update, bot *tgbotapi.BotAPI, response *CallbackData) {
+func responseStateMachine(update tgbotapi.Update, config *Config) {
+	response := CallbackData{}
+	json.Unmarshal([]byte(update.CallbackQuery.Data), &response)
+	switch response.Type {
+	case Approve:
+		аpproveOrderResponse(config, update, &response)
+		// TODO: Сделать уведомление юзера об отказе в посте
+	case Reject:
+		rejectOrderResponse(config, update, &response)
+	case Agreement:
+		agreementOrderResponse(update, &response)
+	}
+}
+
+func agreementOrderResponse(update tgbotapi.Update, response *CallbackData) {
 	order := readOrderById(response.Id)
 
 	//Можно откликнуться миллиард раз
@@ -17,7 +31,7 @@ func agreementOrderResponse(update tgbotapi.Update, bot *tgbotapi.BotAPI, respon
 	bot.Send(msg)
 }
 
-func аpproveOrderResponse(config *Config, update tgbotapi.Update, bot *tgbotapi.BotAPI, response *CallbackData) {
+func аpproveOrderResponse(config *Config, update tgbotapi.Update, response *CallbackData) {
 	order := readOrderById(response.Id)
 	order.State = ApprovedOrderState
 
@@ -28,7 +42,7 @@ func аpproveOrderResponse(config *Config, update tgbotapi.Update, bot *tgbotapi
 	} // , json.Unmarshall()
 	agreementDataJson, _ := json.Marshal(agreementData)
 
-	msg := tgbotapi.NewMessage(config.ChannelChat, order.toString())
+	msg := tgbotapi.NewMessage(config.ChannelChat, order.toTelegramString())
 	btn := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(Texts["respond_order"], string(agreementDataJson))))
 	msg.ReplyMarkup = btn
@@ -42,7 +56,7 @@ func аpproveOrderResponse(config *Config, update tgbotapi.Update, bot *tgbotapi
 	bot.Send(msgRej)
 }
 
-func rejectOrderResponse(config *Config, update tgbotapi.Update, bot *tgbotapi.BotAPI, response *CallbackData) {
+func rejectOrderResponse(config *Config, update tgbotapi.Update, response *CallbackData) {
 	order := readOrderById(response.Id)
 	order.State = ApprovedOrderState
 

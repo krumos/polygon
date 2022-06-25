@@ -6,7 +6,19 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func startCommand(update tgbotapi.Update, bot *tgbotapi.BotAPI) {
+func commandsStateMachine(update tgbotapi.Update, config *Config) {
+	switch update.Message.Text {
+	case Texts["start_command"]: // TODO: Check if user in DB
+		startCommand(update)
+	case Texts["new_order_command"]:
+		newOrderCommand(update)
+	default:
+		userStateMachine(update, config)
+
+	}
+}
+
+func startCommand(update tgbotapi.Update) {
 	user := UserData{Id: update.Message.From.ID}
 	createUser(&user)
 
@@ -14,7 +26,7 @@ func startCommand(update tgbotapi.Update, bot *tgbotapi.BotAPI) {
 	bot.Send(msg)
 }
 
-func newOrderCommand(update tgbotapi.Update, bot *tgbotapi.BotAPI) {
+func newOrderCommand(update tgbotapi.Update) {
 	user := readUser(update.Message.From.ID)
 	user.State = MakingOrderUserState
 	updateUser(&user)
@@ -26,7 +38,7 @@ func newOrderCommand(update tgbotapi.Update, bot *tgbotapi.BotAPI) {
 	bot.Send(msg)
 }
 
-func newHeaderOrderCommand(update tgbotapi.Update, bot *tgbotapi.BotAPI, user *UserData, order *OrderData) {
+func newHeaderOrderCommand(update tgbotapi.Update, user *UserData, order *OrderData) {
 	order.Title = update.Message.Text
 	order.State = DescriptionOrderState
 	updateOrder(order)
@@ -35,7 +47,7 @@ func newHeaderOrderCommand(update tgbotapi.Update, bot *tgbotapi.BotAPI, user *U
 	bot.Send(msg)
 }
 
-func newDescriptionrOrderCommand(update tgbotapi.Update, bot *tgbotapi.BotAPI, user *UserData, order *OrderData) {
+func newDescriptionrOrderCommand(update tgbotapi.Update, user *UserData, order *OrderData, config *Config) {
 	user.State = DefaultUserState
 	updateUser(user)
 
@@ -46,9 +58,7 @@ func newDescriptionrOrderCommand(update tgbotapi.Update, bot *tgbotapi.BotAPI, u
 	msg := tgbotapi.NewMessage(update.Message.From.ID, Texts["order_created_command_an"])
 	bot.Send(msg)
 
-	config, _ := getConfig()
-
-	msg = tgbotapi.NewMessage(config.ModeratorChat, order.toString())
+	msg = tgbotapi.NewMessage(config.ModeratorChat, order.toTelegramString())
 	msg.ParseMode = tgbotapi.ModeMarkdown
 	approveData := CallbackData{
 		Type: Approve,
