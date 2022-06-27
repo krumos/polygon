@@ -17,29 +17,67 @@ func responseStateMachine(update tgbotapi.Update, config *Config) {
 		rejectOrderResponse(config, update, &response)
 	case Agreement:
 		agreementOrderResponse(update, &response)
+	case Confirm:
+		confirmOrderResponse(update, &response, config)
 	}
+}
+
+func confirmOrderResponse(update tgbotapi.Update, response *CallbackData, config *Config) {
+	order := readOrderById(response.Id)
+	order.ExecutorId = response.ExecutorId
+	order.State = ConfirmedOrderState
+
+	updateOrder(&order)
+	media := tgbotapi.NewEditMessageText(config.ChannelChat, int(order.MessageId), order.toTelegramString()/* tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Уже откликнулись", "23"))) */)
+	media.ParseMode = tgbotapi.ModeMarkdown
+	bot.Send(media)
+
+	m := tgbotapi.NewCallback(update.CallbackQuery.ID, "Вы молодец")
+	bot.Request(m)
 }
 
 func agreementOrderResponse(update tgbotapi.Update, response *CallbackData) {
 	order := readOrderById(response.Id)
 
-	//Можно откликнуться миллиард раз
+	orderCallback := OrderCallback{
+		Id: order.Id,
+		ResponderId: update.CallbackQuery.From.ID,
+	}
+
+	if isExistsOrderCallback(&orderCallback) {
+		m := tgbotapi.NewCallback(update.CallbackQuery.ID, "Вы уже откликнулись")
+		bot.Request(m)
+		return 
+	}
+
+	confirmData := CallbackData{
+		Type:       Confirm,
+		Id:         order.Id,
+		ExecutorId: update.CallbackQuery.From.ID,
+	}
+
+	confirmDataJson, _ := json.Marshal(confirmData)
+
 	msg := tgbotapi.NewMessage(order.CustomerId, Texts["agreed_order"])
 	btn := tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonURL(Texts["go_to_chat_button"], "https://t.me/"+update.CallbackQuery.From.UserName)))
+		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonURL(Texts["go_to_chat_button"], "https://t.me/"+update.CallbackQuery.From.UserName)),
+		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(Texts["choose_responder_button"], string(confirmDataJson))))
 	msg.ReplyMarkup = btn
-	bot.Send(msg)
+
+	m, _ := bot.Send(msg)
+
+	orderCallback.MessageId = int64(m.MessageID)
+	createOrderCallback(&orderCallback)
 }
 
 func аpproveOrderResponse(config *Config, update tgbotapi.Update, response *CallbackData) {
 	order := readOrderById(response.Id)
-	order.State = ApprovedOrderState
+	order.State = ConfirmedOrderState
 
-	updateOrder(&order)
 	agreementData := CallbackData{
 		Type: Agreement,
 		Id:   order.Id,
-	} // , json.Unmarshall()
+	}
 	agreementDataJson, _ := json.Marshal(agreementData)
 
 	msg := tgbotapi.NewMessage(config.ChannelChat, order.toTelegramString())
@@ -47,7 +85,10 @@ func аpproveOrderResponse(config *Config, update tgbotapi.Update, response *Cal
 		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(Texts["respond_order"], string(agreementDataJson))))
 	msg.ReplyMarkup = btn
 	msg.ParseMode = tgbotapi.ModeMarkdown
-	bot.Send(msg)
+	m, _ := bot.Send(msg)
+	order.MessageId = m.MessageID
+
+	updateOrder(&order)
 
 	msg = tgbotapi.NewMessage(order.CustomerId, Texts["status_sent"])
 	bot.Send(msg)
@@ -58,7 +99,7 @@ func аpproveOrderResponse(config *Config, update tgbotapi.Update, response *Cal
 
 func rejectOrderResponse(config *Config, update tgbotapi.Update, response *CallbackData) {
 	order := readOrderById(response.Id)
-	order.State = ApprovedOrderState
+	order.State = ConfirmedOrderState
 
 	updateOrder(&order)
 

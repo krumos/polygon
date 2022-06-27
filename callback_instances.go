@@ -6,15 +6,17 @@ const (
 	Approve CallbackDataType = iota + 1
 	Reject
 	Agreement
+	Confirm
 )
 
 type CallbackData struct {
 	Type CallbackDataType
 	Id   int64
+	ExecutorId int64
 }
 
 type OrderCallback struct {
-	Id          int64 `pg:"id"`
+	Id          int64 `pg:"order_id"`
 	ResponderId int64 `pg:"responder_id"`
 	MessageId   int64 `pg:"message_id"`
 }

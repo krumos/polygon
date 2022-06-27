@@ -10,10 +10,12 @@ const (
 )
 
 type UserData struct {
-	Id             int64   `pg:"id,notnull"`
-	CustomerRating float32 `pg:"customer_rating,notnull"`
-	ExecutorRating float32 `pg:"executor_rating,notnull"`
-	State          UserState
+	Id                  int64   `pg:"id,notnull"`
+	CustomerRatingSum   float32 `pg:"customer_rating,notnull"`
+	ExecutorRatingSum   float32 `pg:"executor_rating,notnull"`
+	CustomerRatingCount int32
+	ExecutorRatingCount int32
+	State               UserState
 }
 
 func userStateMachine(update tgbotapi.Update, config *Config) {

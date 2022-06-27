@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -48,12 +49,34 @@ func newHeaderOrderCommand(update tgbotapi.Update, user *UserData, order *OrderD
 }
 
 func newDescriptionrOrderCommand(update tgbotapi.Update, user *UserData, order *OrderData, config *Config) {
+	order.Description = update.Message.Text
+	order.State = DeadlineOrderState // создать мметод который будет возвращать следующую фазу заказа
+	updateOrder(order)
+
+	msg := tgbotapi.NewMessage(update.Message.From.ID, Texts["new_description_command_an"])
+	bot.Send(msg)
+}
+
+func newDeadlineOrderCommand(update tgbotapi.Update, user *UserData, order *OrderData, config *Config) {
+	order.DeadlineDate = update.Message.Text
+	fmt.Println("============");
+	order.State = PriceOrderState
+	updateOrder(order)
+
+	msg := tgbotapi.NewMessage(update.Message.From.ID, Texts["new_deadline_command_an"])
+	bot.Send(msg)
+}
+
+func newPriceOrderCommand(update tgbotapi.Update, user *UserData, order *OrderData, config *Config) {
+	order.Price = update.Message.Text
+	updateOrder(order)
+
+	complateOrder(update, user, order, config)
+}
+
+func complateOrder(update tgbotapi.Update, user *UserData, order *OrderData, config *Config) {
 	user.State = DefaultUserState
 	updateUser(user)
-
-	order.Description = update.Message.Text
-	order.State = ModeratedOrderState
-	updateOrder(order)
 
 	msg := tgbotapi.NewMessage(update.Message.From.ID, Texts["order_created_command_an"])
 	bot.Send(msg)
@@ -75,5 +98,6 @@ func newDescriptionrOrderCommand(update tgbotapi.Update, user *UserData, order *
 		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(Texts["approve_button"], string(approveDataJson)),
 			tgbotapi.NewInlineKeyboardButtonData(Texts["reject_button"], string(rejectDataJson))))
 	msg.ReplyMarkup = btn
-	bot.Send(msg)
+	bot.Send(msg)	
 }
+

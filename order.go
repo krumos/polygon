@@ -9,9 +9,11 @@ type OrderState int64
 const (
 	TitleOrderState OrderState = iota + 1
 	DescriptionOrderState
+	DeadlineOrderState
+	PriceOrderState
 	FilesOrderState
 	ModeratedOrderState
-	ApprovedOrderState
+	ConfirmedOrderState
 	ExecutedOrderState
 )
 
@@ -22,9 +24,10 @@ type OrderData struct {
 	Files        []tgbotapi.Document `pg:"files"` // TODO: How to store files
 	CustomerId   int64               `pg:"customer_id,notnull"`
 	ExecutorId   int64               `pg:"executor_id"`
+	MessageId    int                 `pg:"message_id"`
 	State        OrderState          `pg:"state,notnull"`
 	DeadlineDate string              `pg:"deadline_date"`
-	Price        int64               `pg:"price"`
+	Price        string              `pg:"price"`
 }
 
 func ordersStateMachine(user *UserData, update tgbotapi.Update, config *Config) {
@@ -34,9 +37,16 @@ func ordersStateMachine(user *UserData, update tgbotapi.Update, config *Config) 
 		newHeaderOrderCommand(update, user, order)
 	case DescriptionOrderState:
 		newDescriptionrOrderCommand(update, user, order, config)
+	case DeadlineOrderState:
+		newDeadlineOrderCommand(update, user, order, config)
+	case PriceOrderState:
+		newPriceOrderCommand(update, user, order, config)
 	}
 }
 
 func (order *OrderData) toTelegramString() string {
-	return " *" + order.Title + "* " + "\n\n" + order.Description
+	return "Дисциплина: *" + order.Title + "* \n\n" +
+		"Описание заказа: " + order.Description + "\n\n" +
+		"Дедлайн: *" + order.DeadlineDate + "*\n\n" +
+		"Цена: *" + order.Price + "*"
 }

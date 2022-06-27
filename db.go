@@ -30,8 +30,8 @@ func connectDB(port string, username string, pword string, dbName string) {
 func createUser(user *UserData) {
 	exists, _ := db.Model(user).Where("id=?", user.Id).Exists()
 	if !exists {
-		user.CustomerRating = 5
-		user.ExecutorRating = 5
+		user.CustomerRatingSum = 5
+		user.ExecutorRatingSum = 5
 		db.Model(user).Insert()
 	}
 }
@@ -67,6 +67,8 @@ func readOrderByState(customerId int64) (order *OrderData) {
 	order = new(OrderData)
 	db.Model(order).Where("customer_id=?", customerId).Where("state=?", TitleOrderState).
 		WhereOr("state=?", DescriptionOrderState).
+		WhereOr("state=?", PriceOrderState).
+		WhereOr("state=?", DeadlineOrderState).
 		WhereOr("state=?", FilesOrderState).Select()
 	return order
 }
@@ -77,4 +79,26 @@ func updateOrder(order *OrderData) {
 
 func deleteOrder(order *OrderData) {
 	db.Model(order).WherePK().Delete()
+}
+
+func isExistsOrderCallback(orderCallback *OrderCallback) (exsists bool) {
+	exsists, _ = db.Model(orderCallback).Where("responder_id=? AND order_id=?", orderCallback.ResponderId, orderCallback.Id).Exists()
+	return exsists
+}
+
+func createOrderCallback(orderCallback *OrderCallback) {
+	if !isExistsOrderCallback(orderCallback) {
+		db.Model(orderCallback).Insert()
+
+	}
+}
+
+func readOrderCallback(responderId, orderCallbackId int64) (orderCallback *OrderCallback) {
+	db.Model(orderCallback).Where("responder_id=? AND order_id=?", responderId, orderCallbackId).Select()
+
+	return orderCallback
+}
+
+func deleteOrdercallback(orderCallback *OrderCallback) {
+	db.Model(orderCallback).Where("responder_id=? AND order_id=?", orderCallback.ResponderId, orderCallback.Id).Delete()
 }
