@@ -9,105 +9,105 @@ import (
 func responseStateMachine(update tgbotapi.Update, config *Config) {
 	response := CallbackData{}
 	json.Unmarshal([]byte(update.CallbackQuery.Data), &response)
+
+	order := readOrderById(response.Id)
+
 	switch response.Type {
 	case Approve:
-		аpproveOrderResponse(config, update, &response)
+		аpproveOrderResponse(config, update, &response, &order)
 		// TODO: Сделать уведомление юзера об отказе в посте
 	case Reject:
-		rejectOrderResponse(config, update, &response)
+		rejectOrderResponse(config, update, &response, &order)
 	case Agreement:
-		agreementOrderResponse(update, &response)
+		agreementOrderResponse(update, &response, &order)
 	case Confirm:
-		confirmOrderResponse(update, &response, config)
+		confirmOrderResponse(update, &response, config, &order)
 	}
+	updateOrder(&order)
 }
 
-func confirmOrderResponse(update tgbotapi.Update, response *CallbackData, config *Config) {
-	order := readOrderById(response.Id)
+//Заказчик выбрал исполнителя
+func confirmOrderResponse(update tgbotapi.Update, response *CallbackData, config *Config, order *OrderData) {
 	order.ExecutorId = response.ExecutorId
 	order.State = ConfirmedOrderState
 
-	updateOrder(&order)
-	media := tgbotapi.NewEditMessageText(config.ChannelChat, int(order.MessageId), "TODO") //order.toTelegramMessage()/* tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Уже откликнулись", "23"))) */)
-	media.ParseMode = tgbotapi.ModeMarkdown
-	bot.Send(media)
+	//Удаление кнопки "отклика" с поста
+	orderWOKeyboardPost := tgbotapi.NewEditMessageText(config.ChannelChat, order.MessageId, order.toTelegramString())
+	orderWOKeyboardPost.ParseMode = tgbotapi.ModeMarkdownV2
+	bot.Send(orderWOKeyboardPost)
 
-	m := tgbotapi.NewCallback(update.CallbackQuery.ID, "Вы молодец")
-	bot.Request(m)
+	//Колбэк заказчику
+	bot.Request(tgbotapi.NewCallback(update.CallbackQuery.ID, "Теперь на Ваш заказ нельзя откликнуться"))
 }
 
-func agreementOrderResponse(update tgbotapi.Update, response *CallbackData) {
-	order := readOrderById(response.Id)
-
+//Подает заявку(фрилансер) на выполнение заказа
+func agreementOrderResponse(update tgbotapi.Update, response *CallbackData, order *OrderData) {
 	orderCallback := OrderCallback{
-		Id: order.Id,
+		Id:          order.Id,
 		ResponderId: update.CallbackQuery.From.ID,
 	}
-
+	//Проверяем, откликался ли человек ранее
 	if isExistsOrderCallback(&orderCallback) {
-		m := tgbotapi.NewCallback(update.CallbackQuery.ID, "Вы уже откликнулись")
-		bot.Request(m)
-		return 
+		bot.Request(tgbotapi.NewCallback(update.CallbackQuery.ID, "Вы уже откликнулись"))
+		return
 	}
 
-	confirmData := CallbackData{
+	//InlineButtonData для кнопки подтверждения выбора исполнителя
+	confirmDataJson, _ := json.Marshal(CallbackData{
 		Type:       Confirm,
 		Id:         order.Id,
 		ExecutorId: update.CallbackQuery.From.ID,
-	}
+	})
 
-	confirmDataJson, _ := json.Marshal(confirmData)
+	//Уведомляем заказчика об отклике
+	//Отправляем сообщение создателю заказа с кнопками "перейти в чат" и "выбрать исполнителя"
+	orderAgreementMessage := tgbotapi.NewMessage(order.CustomerId, Texts["agreed_order"])
+	orderAgreementMessage.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonURL(Texts["go_to_chat_button"], "https://t.me/"+update.CallbackQuery.From.UserName),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(Texts["choose_responder_button"], string(confirmDataJson)),
+		))
+	m, _ := bot.Send(orderAgreementMessage)
 
-	msg := tgbotapi.NewMessage(order.CustomerId, Texts["agreed_order"])
-	btn := tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonURL(Texts["go_to_chat_button"], "https://t.me/"+update.CallbackQuery.From.UserName)),
-		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(Texts["choose_responder_button"], string(confirmDataJson))))
-	msg.ReplyMarkup = btn
-
-	m, _ := bot.Send(msg)
-
-	orderCallback.MessageId = int64(m.MessageID)
+	orderCallback.MessageId = m.MessageID
 	createOrderCallback(&orderCallback)
 }
 
-func аpproveOrderResponse(config *Config, update tgbotapi.Update, response *CallbackData) {
-	order := readOrderById(response.Id)
+//Когда пройдена модерация
+func аpproveOrderResponse(config *Config, update tgbotapi.Update, response *CallbackData, order *OrderData) {
 	order.State = ConfirmedOrderState
 
-	agreementData := CallbackData{
+	//InlineButtonData для кнопки отклика на заказ
+	agreementDataJson, _ := json.Marshal(CallbackData{
 		Type: Agreement,
 		Id:   order.Id,
-	}
-	agreementDataJson, _ := json.Marshal(agreementData)
+	})
 
-	text := "[ ](" + order.FilesURL + ")\n" + order.toTelegramString()
-	msg := tgbotapi.NewMessage(config.ChannelChat, text)
-	msg.ParseMode = tgbotapi.ModeMarkdownV2
-	btn := tgbotapi.NewInlineKeyboardMarkup(
+	//Постим отмодерированый заказ в канал с клавиатурой отклика
+	orderWithKeyboardPost := tgbotapi.NewMessage(config.ChannelChat, order.toTelegramString())
+	orderWithKeyboardPost.ParseMode = tgbotapi.ModeMarkdownV2
+	orderWithKeyboardPost.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(Texts["respond_order"], string(agreementDataJson))))
-	msg.ReplyMarkup = btn
-	m, _ := bot.Send(msg)
-	
+	m, _ := bot.Send(orderWithKeyboardPost)
 	order.MessageId = m.MessageID
 
-	updateOrder(&order)
+	//Сообщаем заказчику о том что заказ прошел модерацию
+	orderModeratedMessage := tgbotapi.NewMessage(order.CustomerId, Texts["status_sent"])
+	bot.Send(orderModeratedMessage)
 
-	msg = tgbotapi.NewMessage(order.CustomerId, Texts["status_sent"])
-	bot.Send(msg)
-
-	msgRej := tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID)
-	bot.Send(msgRej)
+	//Удаляем пост из канала модераторов
+	bot.Send(tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID))
 }
 
-func rejectOrderResponse(config *Config, update tgbotapi.Update, response *CallbackData) {
-	order := readOrderById(response.Id)
-	order.State = ConfirmedOrderState
+//Модерация не пройдена
+func rejectOrderResponse(config *Config, update tgbotapi.Update, response *CallbackData, order *OrderData) {
+	order.State = RejectedOrderState
 
-	updateOrder(&order)
+	//Сообщаем заказчику о том что заказ не прошел модерацию
+	bot.Send(tgbotapi.NewMessage(order.CustomerId, Texts["status_rejected"]))
 
-	msg := tgbotapi.NewMessage(order.CustomerId, Texts["status_rejected"])
-	bot.Send(msg)
-
-	msg2 := tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID)
-	bot.Send(msg2)
+	//Удаляем пост из канала модераторов
+	bot.Send(tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID))
 }

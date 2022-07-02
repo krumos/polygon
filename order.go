@@ -14,6 +14,7 @@ const (
 	FilesOrderState
 	ModeratedOrderState
 	ConfirmedOrderState
+	RejectedOrderState
 	ExecutedOrderState
 )
 
@@ -67,7 +68,8 @@ func ordersStateMachine(user *UserData, update tgbotapi.Update, config *Config) 
 }
 
 func (order *OrderData) toTelegramString() string {
-	text := "Дисциплина: *" + order.Title + "* \n\n" +
+	text := "[ ](" + order.FilesURL + ")\n" + 
+		"Дисциплина: *" + order.Title + "* \n\n" +
 		"Описание заказа: " + order.Description + "\n\n" +
 		"Дедлайн: *" + order.DeadlineDate + "*\n\n" +
 		"Цена: *" + order.Price + "*"

@@ -10,15 +10,15 @@ const (
 )
 
 type CallbackData struct {
-	Type CallbackDataType
-	Id   int64
+	Type       CallbackDataType
+	Id         int64
 	ExecutorId int64
 }
 
 type OrderCallback struct {
 	Id          int64 `pg:"order_id"`
 	ResponderId int64 `pg:"responder_id"`
-	MessageId   int64 `pg:"message_id"`
+	MessageId   int   `pg:"message_id"`
 }
 
 // userBotKeyboard := tgbotapi.NewReplyKeyboard(
