@@ -8,6 +8,7 @@ import (
 type Config struct {
 	ModeratorChat int64
 	ChannelChat   int64
+	PhotoChat     int64
 	Token         string
 }
 
@@ -20,3 +21,5 @@ func (config *Config) getConfig() (err error) {
 	e = json.Unmarshal(d, &config)
 	return e
 }
+
+

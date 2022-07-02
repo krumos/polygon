@@ -59,7 +59,6 @@ func newDescriptionrOrderCommand(update tgbotapi.Update, user *UserData, order *
 
 func newDeadlineOrderCommand(update tgbotapi.Update, user *UserData, order *OrderData, config *Config) {
 	order.DeadlineDate = update.Message.Text
-	fmt.Println("============");
 	order.State = PriceOrderState
 	updateOrder(order)
 
@@ -69,20 +68,51 @@ func newDeadlineOrderCommand(update tgbotapi.Update, user *UserData, order *Orde
 
 func newPriceOrderCommand(update tgbotapi.Update, user *UserData, order *OrderData, config *Config) {
 	order.Price = update.Message.Text
+	order.State = FilesOrderState
 	updateOrder(order)
 
-	complateOrder(update, user, order, config)
+	msg := tgbotapi.NewMessage(update.Message.From.ID, Texts["new_price_command_an"])
+	bot.Send(msg)
+}
+
+func newFilesOrderCommand(update tgbotapi.Update, user *UserData, order *OrderData, config *Config) {
+	if update.Message.Text == "STOP" {
+		complateOrder(update, user, order, config)
+	}
+
+	if update.Message.Photo != nil {
+		file := OrderFile{
+			FileId:   update.Message.Photo[0].FileID,
+			OrderId:  order.Id,
+			FileType: "photo",
+		}
+		createFileOrder(&file)
+	}
 }
 
 func complateOrder(update tgbotapi.Update, user *UserData, order *OrderData, config *Config) {
 	user.State = DefaultUserState
 	updateUser(user)
 
-	msg := tgbotapi.NewMessage(update.Message.From.ID, Texts["order_created_command_an"])
-	bot.Send(msg)
+	msg2 := tgbotapi.NewMessage(update.Message.From.ID, Texts["order_created_command_an"])
+	bot.Send(msg2)
 
-	msg = tgbotapi.NewMessage(config.ModeratorChat, order.toTelegramString())
-	msg.ParseMode = tgbotapi.ModeMarkdown
+	files := readFileOrder(order.Id)
+	photos := make([]interface{}, 0)
+	for _, file := range files {
+		photos = append(photos, tgbotapi.NewInputMediaPhoto(tgbotapi.FileID(file.FileId)))
+	}
+	photomsg := tgbotapi.NewMediaGroup(config.PhotoChat, photos)
+	m, _ := bot.SendMediaGroup(photomsg)
+	files_url := "https://t.me/krumos_photo/" + fmt.Sprint(m[0].MessageID)
+	order.FilesURL = files_url
+	updateOrder(order)
+	text := "[ ](" + files_url + ")\n" + order.toTelegramString()
+	msg3 := tgbotapi.NewMessage(config.ModeratorChat, text)
+	msg3.ParseMode = tgbotapi.ModeMarkdownV2
+
+	//msg = tgbotapi.NewMessage(config.ModeratorChat, )
+	//msg.ParseMode = tgbotapi.ModeMarkdown
 	approveData := CallbackData{
 		Type: Approve,
 		Id:   order.Id,
@@ -97,7 +127,6 @@ func complateOrder(update tgbotapi.Update, user *UserData, order *OrderData, con
 	btn := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(Texts["approve_button"], string(approveDataJson)),
 			tgbotapi.NewInlineKeyboardButtonData(Texts["reject_button"], string(rejectDataJson))))
-	msg.ReplyMarkup = btn
-	bot.Send(msg)	
+	msg3.ReplyMarkup = btn
+	bot.Send(msg3)
 }
-

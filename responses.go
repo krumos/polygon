@@ -28,7 +28,7 @@ func confirmOrderResponse(update tgbotapi.Update, response *CallbackData, config
 	order.State = ConfirmedOrderState
 
 	updateOrder(&order)
-	media := tgbotapi.NewEditMessageText(config.ChannelChat, int(order.MessageId), order.toTelegramString()/* tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Уже откликнулись", "23"))) */)
+	media := tgbotapi.NewEditMessageText(config.ChannelChat, int(order.MessageId), "TODO") //order.toTelegramMessage()/* tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Уже откликнулись", "23"))) */)
 	media.ParseMode = tgbotapi.ModeMarkdown
 	bot.Send(media)
 
@@ -80,12 +80,14 @@ func аpproveOrderResponse(config *Config, update tgbotapi.Update, response *Cal
 	}
 	agreementDataJson, _ := json.Marshal(agreementData)
 
-	msg := tgbotapi.NewMessage(config.ChannelChat, order.toTelegramString())
+	text := "[ ](" + order.FilesURL + ")\n" + order.toTelegramString()
+	msg := tgbotapi.NewMessage(config.ChannelChat, text)
+	msg.ParseMode = tgbotapi.ModeMarkdownV2
 	btn := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(Texts["respond_order"], string(agreementDataJson))))
 	msg.ReplyMarkup = btn
-	msg.ParseMode = tgbotapi.ModeMarkdown
 	m, _ := bot.Send(msg)
+	
 	order.MessageId = m.MessageID
 
 	updateOrder(&order)

@@ -19,6 +19,7 @@ func connectDB(port string, username string, pword string, dbName string) {
 		(*UserData)(nil),
 		(*OrderData)(nil),
 		(*OrderCallback)(nil),
+		(*OrderFile)(nil),
 	}
 
 	for _, model := range models {
