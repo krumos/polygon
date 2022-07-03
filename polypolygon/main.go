@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -19,6 +21,9 @@ func connectBot(token string) (updates tgbotapi.UpdatesChannel, err error) {
 }
 
 func main() {
+	s := "...."
+	character := s[2]
+	fmt.Println(string(character))
 	updates, _ := connectBot("5473842943:AAEFw50U83kPXAzxikPu21RaoYrX4diclAY")
 
 	for update := range updates {

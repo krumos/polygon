@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"strings"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -67,12 +70,20 @@ func ordersStateMachine(user *UserData, update tgbotapi.Update, config *Config) 
 	}
 }
 
+func toExcapedString(s string) string {
+	characters := "_*[]()~`>#+-=|{}.!"
+	for _, character := range characters {
+		s = strings.ReplaceAll(s, string(character), `\`+string(character))
+	}
+	return s
+}
+
 func (order *OrderData) toTelegramString() string {
 	text := "[ ](" + order.FilesURL + ")\n" +
-		"Дисциплина: *" + order.Subject + "* \n\n" +
-		"Описание заказа: " + order.Description + "\n\n" +
-		"Дедлайн: *" + order.DeadlineDate + "*\n\n" +
-		"Цена: *" + order.Price + "*"
+		"Дисциплина: *" + toExcapedString(order.Subject) + "* \n\n" +
+		"Описание заказа: " + toExcapedString(order.Description) + "\n\n" +
+		"Дедлайн: *" + toExcapedString(order.DeadlineDate) + "*\n\n" +
+		"Цена: *" + toExcapedString(order.Price) + "*"
 
 	return text
 }

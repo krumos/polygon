@@ -35,7 +35,6 @@ func newOrderCommand(update tgbotapi.Update) {
 	createOrder(&OrderData{CustomerId: user.Id, State: SubjectInputOrderState})
 
 	msg := tgbotapi.NewMessage(user.Id, Texts["new_order_command_answer"])
-	msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(false)
 	bot.Send(msg)
 }
 
@@ -93,7 +92,7 @@ func newFilesUploadOrder(update tgbotapi.Update, user *UserData, order *OrderDat
 
 //Получаем медиагруппу из фотографий заказа
 func getOrderMediaGroup(files []OrderFile, config *Config) tgbotapi.MediaGroupConfig {
-	
+
 	photos := make([]interface{}, 0)
 	for _, file := range files {
 		photos = append(photos, tgbotapi.NewInputMediaPhoto(tgbotapi.FileID(file.FileId)))
@@ -109,13 +108,13 @@ func completeOrder(update tgbotapi.Update, user *UserData, order *OrderData, con
 	msg := tgbotapi.NewMessage(update.Message.From.ID, Texts["order_created_command_an"])
 	msg.ReplyMarkup = tgbotapi.NewReplyKeyboard(tgbotapi.NewKeyboardButtonRow(tgbotapi.NewKeyboardButton(Texts["new_order_command"])))
 	bot.Send(msg)
-	
+
 	files := readFileOrder(order.Id)
 	var files_url string
-	if (len(files) != 0) {
+	if len(files) != 0 {
 		OrderMediaPost, _ := bot.SendMediaGroup(getOrderMediaGroup(files, config))
 		files_url = "https://t.me/krumos_photo/" + fmt.Sprint(OrderMediaPost[0].MessageID)
-	} 
+	}
 	order.State = ModeratedOrderState
 	order.FilesURL = files_url
 	updateOrder(order)
