@@ -66,11 +66,8 @@ func readOrderById(orderId int64) OrderData {
 
 func readOrderByState(customerId int64) (order *OrderData) {
 	order = new(OrderData)
-	db.Model(order).Where("customer_id=?", customerId).Where("state=?", SubjectInputOrderState).
-		WhereOr("state=?", DescriptionInputOrderState).
-		WhereOr("state=?", PriceInputOrderState).
-		WhereOr("state=?", DeadlineInputOrderState).
-		WhereOr("state=?", FilesUploadOrderState).Select()
+	db.Model(order).Where("customer_id=? AND (state=? OR state=? OR state=? OR state=? OR state=?)",
+		customerId, SubjectInputOrderState, DescriptionInputOrderState, PriceInputOrderState, DeadlineInputOrderState, FilesUploadOrderState).Select()
 	return order
 }
 

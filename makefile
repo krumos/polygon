@@ -1,5 +1,5 @@
 createdb: 
-	sudo docker run --name PolygonDB -p 5432:5432 -e POSTGRES_PASSWORD=pass -d postgres:13.5
+	sudo docker run --name PolygonDB -p 5432:5432 -e POSTGRES_USERNAME=postgres -e POSTGRES_PASSWORD=password -d postgres:13.5
 
 psql:
 	sudo docker exec -it PolygonDB psql -U postgres postgres

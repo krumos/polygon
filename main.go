@@ -32,7 +32,7 @@ func main() {
 		panic(err)
 	}
 
-	connectDB(":5432", "postgres", "pass", "postgres")
+	connectDB(":5432", "postgres", "password", "postgres")
 
 	for update := range updates {
 		if update.CallbackQuery != nil {
