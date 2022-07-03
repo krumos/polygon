@@ -9,75 +9,74 @@ import (
 
 func commandsStateMachine(update tgbotapi.Update, config *Config) {
 	switch update.Message.Text {
-	case Texts["start_command"]: // TODO: Check if user in DB
+	case Texts["start_command"]:
 		startCommand(update)
 	case Texts["new_order_command"]:
 		newOrderCommand(update)
 	default:
 		userStateMachine(update, config)
-
 	}
 }
 
+//Команда при запуске бота
 func startCommand(update tgbotapi.Update) {
-	user := UserData{Id: update.Message.From.ID}
-	createUser(&user)
+	//Регистрация юзера
+	createUser(&UserData{Id: update.Message.From.ID})
 
-	msg := tgbotapi.NewMessage(update.Message.From.ID, Texts["start_command_answer"])
-	bot.Send(msg)
+	bot.Send(tgbotapi.NewMessage(update.Message.From.ID, Texts["start_command_answer"]))
 }
 
+//Команда создания новго закаща
 func newOrderCommand(update tgbotapi.Update) {
 	user := readUser(update.Message.From.ID)
 	user.State = MakingOrderUserState
 	updateUser(&user)
 
-	order := OrderData{CustomerId: user.Id, State: TitleOrderState}
-	createOrder(&order)
+	createOrder(&OrderData{CustomerId: user.Id, State: SubjectInputOrderState})
 
-	msg := tgbotapi.NewMessage(user.Id, Texts["new_order_command_answer"])
-	bot.Send(msg)
+	bot.Send(tgbotapi.NewMessage(user.Id, Texts["new_order_command_answer"]))
 }
 
-func newHeaderOrderCommand(update tgbotapi.Update, user *UserData, order *OrderData) {
-	order.Title = update.Message.Text
-	order.State = DescriptionOrderState
+//Ввод предметной области заказа
+func newHeaderInputOrder(update tgbotapi.Update, user *UserData, order *OrderData) {
+	order.Subject = update.Message.Text
+	order.State = DescriptionInputOrderState
 	updateOrder(order)
 
-	msg := tgbotapi.NewMessage(update.Message.From.ID, Texts["new_header_command_an"])
-	bot.Send(msg)
+	bot.Send(tgbotapi.NewMessage(update.Message.From.ID, Texts["new_header_command_an"]))
 }
 
-func newDescriptionrOrderCommand(update tgbotapi.Update, user *UserData, order *OrderData, config *Config) {
+//Ввод описания заказа
+func newDescriptionInputOrder(update tgbotapi.Update, user *UserData, order *OrderData, config *Config) {
 	order.Description = update.Message.Text
-	order.State = DeadlineOrderState // создать мметод который будет возвращать следующую фазу заказа
+	order.State = DeadlineInputOrderState
 	updateOrder(order)
 
-	msg := tgbotapi.NewMessage(update.Message.From.ID, Texts["new_description_command_an"])
-	bot.Send(msg)
+	bot.Send(tgbotapi.NewMessage(update.Message.From.ID, Texts["new_description_command_an"]))
 }
 
-func newDeadlineOrderCommand(update tgbotapi.Update, user *UserData, order *OrderData, config *Config) {
+//Ввод даты дедлайна
+func newDeadlineInputOrder(update tgbotapi.Update, user *UserData, order *OrderData, config *Config) {
 	order.DeadlineDate = update.Message.Text
-	order.State = PriceOrderState
+	order.State = PriceInputOrderState
 	updateOrder(order)
 
-	msg := tgbotapi.NewMessage(update.Message.From.ID, Texts["new_deadline_command_an"])
-	bot.Send(msg)
+	bot.Send(tgbotapi.NewMessage(update.Message.From.ID, Texts["new_deadline_command_an"]))
 }
 
-func newPriceOrderCommand(update tgbotapi.Update, user *UserData, order *OrderData, config *Config) {
+//Ввод цены заказа
+func newPriceInputOrder(update tgbotapi.Update, user *UserData, order *OrderData, config *Config) {
 	order.Price = update.Message.Text
-	order.State = FilesOrderState
+	order.State = FilesUploadOrderState
 	updateOrder(order)
 
-	msg := tgbotapi.NewMessage(update.Message.From.ID, Texts["new_price_command_an"])
-	bot.Send(msg)
+	bot.Send(tgbotapi.NewMessage(update.Message.From.ID, Texts["new_price_command_an"]))
 }
 
-func newFilesOrderCommand(update tgbotapi.Update, user *UserData, order *OrderData, config *Config) {
-	if update.Message.Text == "STOP" {
-		complateOrder(update, user, order, config)
+//Прикрепление файлов
+func newFilesUploadOrder(update tgbotapi.Update, user *UserData, order *OrderData, config *Config) {
+	if update.Message.Text == "STOP" { //TODO: забабахать кнопку
+		completeOrder(update, user, order, config)
 	}
 
 	if update.Message.Photo != nil {
@@ -90,43 +89,47 @@ func newFilesOrderCommand(update tgbotapi.Update, user *UserData, order *OrderDa
 	}
 }
 
-func complateOrder(update tgbotapi.Update, user *UserData, order *OrderData, config *Config) {
-	user.State = DefaultUserState
-	updateUser(user)
-
-	msg2 := tgbotapi.NewMessage(update.Message.From.ID, Texts["order_created_command_an"])
-	bot.Send(msg2)
-
+//Получаем медиагруппу из фотографий заказа
+func getOrderMediaGroup(order *OrderData, config *Config) tgbotapi.MediaGroupConfig {
 	files := readFileOrder(order.Id)
 	photos := make([]interface{}, 0)
 	for _, file := range files {
 		photos = append(photos, tgbotapi.NewInputMediaPhoto(tgbotapi.FileID(file.FileId)))
 	}
-	photomsg := tgbotapi.NewMediaGroup(config.PhotoChat, photos)
-	m, _ := bot.SendMediaGroup(photomsg)
-	files_url := "https://t.me/krumos_photo/" + fmt.Sprint(m[0].MessageID)
+	return tgbotapi.NewMediaGroup(config.PhotoChat, photos)
+}
+
+//Формирование заказа
+func completeOrder(update tgbotapi.Update, user *UserData, order *OrderData, config *Config) {
+	user.State = DefaultUserState
+	updateUser(user)
+
+	bot.Send(tgbotapi.NewMessage(update.Message.From.ID, Texts["order_created_command_an"]))
+
+	OrderMediaPost, _ := bot.SendMediaGroup(getOrderMediaGroup(order, config))
+
+	files_url := "https://t.me/krumos_photo/" + fmt.Sprint(OrderMediaPost[0].MessageID)
 	order.FilesURL = files_url
 	updateOrder(order)
-	text := "[ ](" + files_url + ")\n" + order.toTelegramString()
-	msg3 := tgbotapi.NewMessage(config.ModeratorChat, text)
-	msg3.ParseMode = tgbotapi.ModeMarkdownV2
 
-	//msg = tgbotapi.NewMessage(config.ModeratorChat, )
-	//msg.ParseMode = tgbotapi.ModeMarkdown
-	approveData := CallbackData{
+	approveDataJson, _ := json.Marshal(CallbackData{
 		Type: Approve,
 		Id:   order.Id,
-	}
-	approveDataJson, _ := json.Marshal(approveData)
+	})
 
-	rejectData := CallbackData{
+	rejectDataJson, _ := json.Marshal(CallbackData{
 		Type: Reject,
 		Id:   order.Id,
-	} // , json.Unmarshall()
-	rejectDataJson, _ := json.Marshal(rejectData)
-	btn := tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(Texts["approve_button"], string(approveDataJson)),
-			tgbotapi.NewInlineKeyboardButtonData(Texts["reject_button"], string(rejectDataJson))))
-	msg3.ReplyMarkup = btn
-	bot.Send(msg3)
+	})
+
+	ModeratorButtonConfig := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(Texts["approve_button"], string(approveDataJson)),
+			tgbotapi.NewInlineKeyboardButtonData(Texts["reject_button"], string(rejectDataJson)),
+		))
+
+	OrderToModeratorChatMessage := tgbotapi.NewMessage(config.ModeratorChat, order.toTelegramString())
+	OrderToModeratorChatMessage.ParseMode = tgbotapi.ModeMarkdownV2
+	OrderToModeratorChatMessage.ReplyMarkup = ModeratorButtonConfig
+	bot.Send(OrderToModeratorChatMessage)
 }

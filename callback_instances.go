@@ -20,12 +20,3 @@ type OrderCallback struct {
 	ResponderId int64 `pg:"responder_id"`
 	MessageId   int   `pg:"message_id"`
 }
-
-// userBotKeyboard := tgbotapi.NewReplyKeyboard(
-// 	tgbotapi.NewKeyboardButtonRow(
-// 		tgbotapi.NewKeyboardButton("/start"),
-// 	),
-// 	tgbotapi.NewKeyboardButtonRow(
-// 		tgbotapi.NewKeyboardButton("/new_order"),
-// 	),
-// )

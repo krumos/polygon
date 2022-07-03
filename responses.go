@@ -13,13 +13,15 @@ func responseStateMachine(update tgbotapi.Update, config *Config) {
 	order := readOrderById(response.Id)
 
 	switch response.Type {
+	// -------- результат модерации --------
 	case Approve:
 		аpproveOrderResponse(config, update, &response, &order)
-		// TODO: Сделать уведомление юзера об отказе в посте
 	case Reject:
 		rejectOrderResponse(config, update, &response, &order)
+	// -------- отклик на заказ --------
 	case Agreement:
 		agreementOrderResponse(update, &response, &order)
+	// -------- подтверждение исполнителя -------
 	case Confirm:
 		confirmOrderResponse(update, &response, config, &order)
 	}
