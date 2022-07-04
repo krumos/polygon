@@ -10,11 +10,11 @@ const (
 )
 
 type UserData struct {
-	Id                  int64   `pg:"id,notnull"`
-	CustomerRatingSum   float32 `pg:"customer_rating"`
-	ExecutorRatingSum   float32 `pg:"executor_rating"`
-	CustomerRatingCount int32	`pg:"customer_rating_count"`
-	ExecutorRatingCount int32	`pg:"executor_rating_count"`
+	Id                  int64 `pg:"id,notnull"`
+	CustomerRatingSum   int32 `pg:"customer_rating"`
+	ExecutorRatingSum   int32 `pg:"executor_rating"`
+	CustomerRatingCount int32 `pg:"customer_rating_count"`
+	ExecutorRatingCount int32 `pg:"executor_rating_count"`
 	State               UserState
 }
 

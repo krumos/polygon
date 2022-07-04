@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -20,11 +21,14 @@ func connectBot(token string) (updates tgbotapi.UpdatesChannel, err error) {
 	return updates, err
 }
 
+
+
 func main() {
 	s := "...."
 	character := s[2]
 	fmt.Println(string(character))
 	updates, _ := connectBot("5473842943:AAEFw50U83kPXAzxikPu21RaoYrX4diclAY")
+
 
 	for update := range updates {
 		// photo := tgbotapi.NewInputMediaPhoto(tgbotapi.FileID("AgACAgIAAxkBAAICn2K9hSSzhf_JD_EocdPGTXiTucu-AAISvDEbP9HwSVJcBDeCSlSwAQADAgADeAADKQQ"))
@@ -34,11 +38,11 @@ func main() {
 		// mediaGroup := tgbotapi.NewMediaGroup(update.Message.From.ID, []interface{}{photo, photo2})
 
 		// bot.Send(mediaGroup)
-		text := "[ ](https://t.me/krumos_photo/5)" + update.Message.Text
-		msg3 := tgbotapi.NewMessage(-1001468825053, text)
-		msg3.ParseMode = tgbotapi.ModeMarkdown
-		bot.Send(msg3)
-
+		// text := "[ ](https://t.me/krumos_photo/5)" + update.Message.Text
+		// msg3 := tgbotapi.NewMessage(-1001468825053, text)
+		// msg3.ParseMode = tgbotapi.ModeMarkdown
+		// bot.Send(msg3)
+		bot.Send(tgbotapi.NewMessage(update.Message.From.ID, update.Message.Text))
 		// document:= tgbotapi.NewInputMediaDocument(tgbotapi.FileID("BQACAgIAAxkBAAICuGK9lVsj4pSraZqReCMbu73yv6lGAAIiHQACP9HwSV3hKEwmySzPKQQ"))
 		// document.Caption = "Привет"
 		// tgbotapi.NewMediaGroup(update.Message.From.ID, []interface{}{ document })

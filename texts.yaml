@@ -1,6 +1,6 @@
 start_command: "/start"
 new_order_command: "📓Создать заказ"
-agreed_order: "На ваш заказ откликнулись)"
+agreed_order: "Ваш заказ хочет выполнить"
 respond_order: "🙋Откликнуться"
 status_sent: "Ваш заказ отправлен"
 status_rejected: "Ваш заказ отклонен"

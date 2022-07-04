@@ -71,6 +71,11 @@ func readOrderByState(customerId int64) (order *OrderData) {
 	return order
 }
 
+func readConfirmedOrder() (orders []OrderData) {
+	//TODO достать из базы все заказы с состоянием ConfirmedOrderState
+	return orders
+}
+
 func updateOrder(order *OrderData) {
 	db.Model(order).WherePK().Update()
 }

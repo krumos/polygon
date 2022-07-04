@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -18,6 +20,17 @@ func connectBot(token string) (updates tgbotapi.UpdatesChannel, err error) {
 	return updates, err
 }
 
+func spamer() {
+	h := 48
+	for {
+		time.Sleep(time.Duration(time.Hour * time.Duration(h)))
+		orders := readConfirmedOrder()
+		for _, order := range orders {
+			bot.Send(tgbotapi.NewMessage(order.CustomerId, "Ваш заказнейм уже выполнен?")) //TODO клавиатурка
+		}
+	}
+}
+
 func main() {
 	getText("texts.yaml")
 
@@ -33,6 +46,8 @@ func main() {
 	}
 
 	connectDB(":5432", "postgres", "password", "postgres")
+
+	go spamer()
 
 	for update := range updates {
 		if update.CallbackQuery != nil {

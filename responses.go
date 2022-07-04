@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -42,6 +43,14 @@ func confirmOrderResponse(update tgbotapi.Update, response *CallbackData, config
 	bot.Request(tgbotapi.NewCallback(update.CallbackQuery.ID, "Теперь на Ваш заказ нельзя откликнуться"))
 }
 
+func getStringCustomerRating(user *UserData) string { // TODO расширение над юзером?
+	text := "\n\nРейтинг исполнителя:"
+	if user.CustomerRatingCount == 0 {
+		return text + "Пользователя еще никто не оценил"
+	}
+	return text + fmt.Sprintf("%f", float64(user.CustomerRatingCount/user.CustomerRatingSum)) // вообще не уверен что тут всё ок, но пусть так
+}
+
 //Подает заявку(фрилансер) на выполнение заказа
 func agreementOrderResponse(update tgbotapi.Update, response *CallbackData, order *OrderData) {
 	orderCallback := OrderCallback{
@@ -61,9 +70,11 @@ func agreementOrderResponse(update tgbotapi.Update, response *CallbackData, orde
 		ExecutorId: update.CallbackQuery.From.ID,
 	})
 
+	user := readUser(update.CallbackQuery.From.ID) // TODO: Нужно проверять зареган ли чел в боте. Потому что нам нужно подгружать рейтинг. Возможно его можно сразу регистрировать тут
+
 	//Уведомляем заказчика об отклике
 	//Отправляем сообщение создателю заказа с кнопками "перейти в чат" и "выбрать исполнителя"
-	orderAgreementMessage := tgbotapi.NewMessage(order.CustomerId, Texts["agreed_order"])
+	orderAgreementMessage := tgbotapi.NewMessage(order.CustomerId, Texts["agreed_order"]+"**"+toExcapedString(update.CallbackQuery.From.UserName)+"**"+getStringCustomerRating(&user)) //отвратително
 	orderAgreementMessage.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonURL(Texts["go_to_chat_button"], "https://t.me/"+update.CallbackQuery.From.UserName),
@@ -71,6 +82,7 @@ func agreementOrderResponse(update tgbotapi.Update, response *CallbackData, orde
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData(Texts["choose_responder_button"], string(confirmDataJson)),
 		))
+	orderAgreementMessage.ParseMode = tgbotapi.ModeMarkdownV2 // нужно экранировать юзернейм
 	m, _ := bot.Send(orderAgreementMessage)
 
 	orderCallback.MessageId = m.MessageID
