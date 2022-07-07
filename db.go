@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"github.com/go-pg/pg/v10"
 	"github.com/go-pg/pg/v10/orm"
 )
@@ -31,16 +33,16 @@ func connectDB(port string, username string, pword string, dbName string) {
 func createUser(user *UserData) {
 	exists, _ := db.Model(user).Where("id=?", user.Id).Exists()
 	if !exists {
-		user.CustomerRatingSum = 5
-		user.ExecutorRatingSum = 5
+		user.CustomerRatingSum = 0
+		user.ExecutorRatingSum = 0
 		db.Model(user).Insert()
 	}
 }
 
-func readUser(id int64) UserData {
+func readUser(id int64) *UserData {
 	user := new(UserData)
 	db.Model(user).Where("id=?", id).Select()
-	return *user
+	return user
 }
 
 func updateUser(user *UserData) {
@@ -71,7 +73,12 @@ func readOrderByState(customerId int64) (order *OrderData) {
 	return order
 }
 
-func readConfirmedOrder() (orders []OrderData) {
+func readConfirmedOrder(duration time.Duration) (orders []OrderData) {
+	currentTime := time.Now()
+	currentTime = currentTime.Add(-duration)
+
+	db.Model(&orders).Where("state=? AND confirmation_time<?", ConfirmedOrderState, currentTime).Select()
+	
 	//TODO достать из базы все заказы с состоянием ConfirmedOrderState
 	return orders
 }

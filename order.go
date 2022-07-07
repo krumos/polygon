@@ -1,9 +1,9 @@
 package main
 
 import (
-	"strings"
-
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"strings"
+	"time"
 )
 
 type OrderState int64
@@ -21,16 +21,17 @@ const (
 )
 
 type OrderData struct {
-	Id           int64      `pg:"id,pk"`
-	Subject      string     `pg:"subject"`
-	Description  string     `pg:"description"`
-	FilesURL     string     `pg:"files_url"`
-	CustomerId   int64      `pg:"customer_id,notnull"`
-	ExecutorId   int64      `pg:"executor_id"`
-	MessageId    int        `pg:"message_id"`
-	State        OrderState `pg:"state,notnull"`
-	DeadlineDate string     `pg:"deadline_date"`
-	Price        string     `pg:"price"`
+	Id               int64      `pg:"id,pk"`
+	Subject          string     `pg:"subject"`
+	Description      string     `pg:"description"`
+	FilesURL         string     `pg:"files_url"`
+	CustomerId       int64      `pg:"customer_id,notnull"`
+	ExecutorId       int64      `pg:"executor_id"`
+	MessageId        int        `pg:"message_id"`
+	State            OrderState `pg:"state,notnull"`
+	DeadlineDate     string     `pg:"deadline_date"`
+	Price            string     `pg:"price"`
+	ConfirmationTime time.Time  `pg:"confirmation_time"`
 }
 
 type OrderFile struct {

@@ -30,7 +30,7 @@ func startCommand(update tgbotapi.Update) {
 func newOrderCommand(update tgbotapi.Update) {
 	user := readUser(update.Message.From.ID)
 	user.State = MakingOrderUserState
-	updateUser(&user)
+	updateUser(user)
 
 	createOrder(&OrderData{CustomerId: user.Id, State: SubjectInputOrderState})
 

@@ -7,6 +7,9 @@ const (
 	Reject
 	Agreement
 	Confirm
+	AcceptRating
+	RejectRating
+	Rating
 )
 
 type CallbackData struct {
@@ -19,4 +22,11 @@ type OrderCallback struct {
 	Id          int64 `pg:"order_id"`
 	ResponderId int64 `pg:"responder_id"`
 	MessageId   int   `pg:"message_id"`
+}
+
+
+type CallbackRatingData struct {
+	Type       CallbackDataType
+	Id         int64
+	Mark	   int32
 }

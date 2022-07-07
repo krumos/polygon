@@ -11,10 +11,10 @@ const (
 
 type UserData struct {
 	Id                  int64 `pg:"id,notnull"`
-	CustomerRatingSum   int32 `pg:"customer_rating"`
-	ExecutorRatingSum   int32 `pg:"executor_rating"`
-	CustomerRatingCount int32 `pg:"customer_rating_count"`
-	ExecutorRatingCount int32 `pg:"executor_rating_count"`
+	CustomerRatingSum   int32 `pg:"customer_rating,use_zero"`
+	ExecutorRatingSum   int32 `pg:"executor_rating,use_zero"`
+	CustomerRatingCount int32 `pg:"customer_rating_count,use_zero"`
+	ExecutorRatingCount int32 `pg:"executor_rating_count,use_zero"`
 	State               UserState
 }
 
@@ -22,7 +22,7 @@ func userStateMachine(update tgbotapi.Update, config *Config) {
 	user := readUser(update.Message.From.ID)
 	switch user.State {
 	case MakingOrderUserState:
-		ordersStateMachine(&user, update, config)
+		ordersStateMachine(user, update, config)
 	case DefaultUserState:
 		//TODO:
 	}
