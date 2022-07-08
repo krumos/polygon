@@ -63,7 +63,8 @@ func ratingOrderResponse(update tgbotapi.Update, order *OrderData, user *UserDat
 	bot.Request(tgbotapi.NewCallback(update.CallbackQuery.ID, "Спасибо за оценку"))
 }
 
-func getRatingKeyboard(ratingType CallbackDataType, order *OrderData) (keyboard []tgbotapi.InlineKeyboardButton) {
+func getRatingKeyboard(ratingType CallbackDataType, order *OrderData) []tgbotapi.InlineKeyboardButton {
+	keyboard := make([]tgbotapi.InlineKeyboardButton, 5)
 	for i := 0; i < 5; i++ {
 		ratingData, _ := json.Marshal(CallbackRatingData{
 			Type: ratingType,

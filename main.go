@@ -45,7 +45,7 @@ func spamer() {
 				Id:   order.Id,
 			})
 
-			checkExecutedOrderMessage := tgbotapi.NewMessage(order.CustomerId, "Ваш"+" [заказ](https://t.me/krumos/"+fmt.Sprint(order.MessageId)+" уже выполнен?")
+			checkExecutedOrderMessage := tgbotapi.NewMessage(order.CustomerId, "Ваш"+" [заказ](https://t.me/krumos/"+fmt.Sprint(order.MessageId)+") уже выполнен?")
 
 			RatingButtonConfig := tgbotapi.NewInlineKeyboardMarkup(
 				tgbotapi.NewInlineKeyboardRow(
@@ -56,7 +56,7 @@ func spamer() {
 					tgbotapi.NewInlineKeyboardButtonData("Больше не спрашивать", string(archiveOrderDataJson)),
 				))
 			checkExecutedOrderMessage.ReplyMarkup = RatingButtonConfig
-
+			checkExecutedOrderMessage.ParseMode = tgbotapi.ModeMarkdownV2
 			bot.Send(checkExecutedOrderMessage)
 		}
 	}
