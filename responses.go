@@ -30,19 +30,31 @@ func responseStateMachine(update tgbotapi.Update, config *Config) {
 		acceptRatingOrderResponse(update, &order)
 	case RejectRating:
 		rejectRatingOrderResponse(update)
-	case Rating:
-		ratingOrderResponse(update, &order)
+	case RatingExecutor:
+		user := readUser(order.ExecutorId)
+		ratingOrderResponse(update, &order, user, ratingExecutor)
+	case RatingCustomer:
+		user := readUser(order.CustomerId)
+		ratingOrderResponse(update, &order, user, ratingCustomer)
 	}
 	updateOrder(&order)
 }
 
-func ratingOrderResponse(update tgbotapi.Update, order *OrderData) {
-	user := readUser(order.ExecutorId)
+func ratingCustomer(user *UserData, mark int32) {
+	user.CustomerRatingCount++
+	user.CustomerRatingSum += mark
+}
+
+func ratingExecutor(user *UserData, mark int32) {
+	user.ExecutorRatingCount++
+	user.ExecutorRatingSum += mark
+}
+
+func ratingOrderResponse(update tgbotapi.Update, order *OrderData, user *UserData, f func(*UserData, int32)) {
 	response := CallbackRatingData{}
 	json.Unmarshal([]byte(update.CallbackQuery.Data), &response)
 
-	user.ExecutorRatingCount++
-	user.ExecutorRatingSum += response.Mark
+	f(user, response.Mark)
 
 	updateUser(user)
 
@@ -51,48 +63,35 @@ func ratingOrderResponse(update tgbotapi.Update, order *OrderData) {
 	bot.Request(tgbotapi.NewCallback(update.CallbackQuery.ID, "Спасибо за оценку"))
 }
 
+func getRatingKeyboard(ratingType CallbackDataType, order *OrderData) (keyboard []tgbotapi.InlineKeyboardButton) {
+	for i := 0; i < 5; i++ {
+		ratingData, _ := json.Marshal(CallbackRatingData{
+			Type: ratingType,
+			Id:   order.Id,
+			Mark: int32(i + 1),
+		})
+		keyboard[i] = tgbotapi.NewInlineKeyboardButtonData(fmt.Sprint(i+1), string(ratingData))
+	}
+	return keyboard
+}
+
 func acceptRatingOrderResponse(update tgbotapi.Update, order *OrderData) {
 	order.State = ExecutedOrderState
 	updateOrder(order)
 
-	ratingDataJson1, _ := json.Marshal(CallbackRatingData{
-		Type: Rating,
-		Id:   order.Id,
-		Mark: 1,
-	})
-	ratingDataJson2, _ := json.Marshal(CallbackRatingData{
-		Type: Rating,
-		Id:   order.Id,
-		Mark: 2,
-	})
-	ratingDataJson3, _ := json.Marshal(CallbackRatingData{
-		Type: Rating,
-		Id:   order.Id,
-		Mark: 3,
-	})	
-	ratingDataJson4, _ := json.Marshal(CallbackRatingData{
-		Type: Rating,
-		Id:   order.Id,
-		Mark: 4,
-	})	
-	ratingDataJson5, _ := json.Marshal(CallbackRatingData{
-		Type: Rating,
-		Id:   order.Id,
-		Mark: 5,
-	})
-
 	RatingButtonConfig := tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("1", string(ratingDataJson1)),
-			tgbotapi.NewInlineKeyboardButtonData("2", string(ratingDataJson2)),
-			tgbotapi.NewInlineKeyboardButtonData("3", string(ratingDataJson3)),
-			tgbotapi.NewInlineKeyboardButtonData("4", string(ratingDataJson4)),
-			tgbotapi.NewInlineKeyboardButtonData("5", string(ratingDataJson5)),
-		))
+		tgbotapi.NewInlineKeyboardRow(getRatingKeyboard(RatingExecutor, order)...))
 
 	ratingOrderMessage := tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.From.ID, update.CallbackQuery.Message.MessageID, RatingButtonConfig)
 
 	bot.Send(ratingOrderMessage)
+
+	RatingButtonConfig = tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(getRatingKeyboard(RatingCustomer, order)...))
+
+	ratingOrderTextMessage := tgbotapi.NewMessage(order.ExecutorId, "Оцените работу с заказчиком")
+	ratingOrderTextMessage.ReplyMarkup = RatingButtonConfig
+	bot.Send(ratingOrderTextMessage)
 }
 
 func rejectRatingOrderResponse(update tgbotapi.Update) {
@@ -114,14 +113,20 @@ func confirmOrderResponse(update tgbotapi.Update, response *CallbackData, config
 
 	//Колбэк заказчику
 	bot.Request(tgbotapi.NewCallback(update.CallbackQuery.ID, "Теперь на Ваш заказ нельзя откликнуться"))
+
+	callbacks := readCallbacksOrder(order)
+	fmt.Println(len(callbacks))
+	for _, callback := range callbacks {
+		bot.Send(tgbotapi.NewDeleteMessage(order.CustomerId, callback.MessageId))
+	}
 }
 
 func getStringCustomerRating(user *UserData) string { // TODO расширение над юзером?
-	text := "\n\nРейтинг исполнителя:"
+	text := "\n\nРейтинг исполнителя: "
 	if user.ExecutorRatingCount == 0 {
-		return text + "Пользователя еще никто не оценил"
+		return text + "оценок еще нет"
 	}
-	return text + fmt.Sprintf("%f", float64(user.ExecutorRatingSum/user.ExecutorRatingCount)) // вообще не уверен что тут всё ок, но пусть так
+	return text + fmt.Sprintf("%.2f", float64(user.ExecutorRatingSum/user.ExecutorRatingCount)) // вообще не уверен что тут всё ок, но пусть так
 }
 
 //Подает заявку(фрилансер) на выполнение заказа
@@ -129,6 +134,10 @@ func agreementOrderResponse(update tgbotapi.Update, response *CallbackData, orde
 	orderCallback := OrderCallback{
 		Id:          order.Id,
 		ResponderId: update.CallbackQuery.From.ID,
+	}
+	if order.CustomerId == update.CallbackQuery.From.ID {
+		bot.Request(tgbotapi.NewCallback(update.CallbackQuery.ID, "Вы создатель заказа"))
+		return
 	}
 	//Проверяем, откликался ли человек ранее
 	if isExistsOrderCallback(&orderCallback) {
@@ -152,7 +161,10 @@ func agreementOrderResponse(update tgbotapi.Update, response *CallbackData, orde
 	}
 	//Уведомляем заказчика об отклике
 	//Отправляем сообщение создателю заказа с кнопками "перейти в чат" и "выбрать исполнителя"
-	orderAgreementMessage := tgbotapi.NewMessage(order.CustomerId, Texts["agreed_order"]+"**"+toExcapedString(update.CallbackQuery.From.UserName)+"**"+toExcapedString(getStringCustomerRating(user))) //отвратително
+	orderAgreementMessage := tgbotapi.NewMessage(order.CustomerId, "Ваш [заказ]("+"https://t.me/krumos/"+fmt.Sprint(order.MessageId)+") хочет выполнить"+
+		" **"+toExcapedString(update.CallbackQuery.From.UserName)+"**"+
+		toExcapedString(getStringCustomerRating(user))) //отвратително
+
 	orderAgreementMessage.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonURL(Texts["go_to_chat_button"], "https://t.me/"+update.CallbackQuery.From.UserName),
@@ -169,7 +181,11 @@ func agreementOrderResponse(update tgbotapi.Update, response *CallbackData, orde
 
 //Когда пройдена модерация
 func аpproveOrderResponse(config *Config, update tgbotapi.Update, response *CallbackData, order *OrderData) {
+	if order.State == ConfirmedOrderState {
+		return
+	}
 	order.State = ConfirmedOrderState
+	updateOrder(order)
 
 	//InlineButtonData для кнопки отклика на заказ
 	agreementDataJson, _ := json.Marshal(CallbackData{

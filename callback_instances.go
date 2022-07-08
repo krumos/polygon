@@ -9,7 +9,9 @@ const (
 	Confirm
 	AcceptRating
 	RejectRating
-	Rating
+	ArchiveOrder
+	RatingExecutor
+	RatingCustomer
 )
 
 type CallbackData struct {
@@ -24,9 +26,8 @@ type OrderCallback struct {
 	MessageId   int   `pg:"message_id"`
 }
 
-
 type CallbackRatingData struct {
-	Type       CallbackDataType
-	Id         int64
-	Mark	   int32
+	Type CallbackDataType
+	Id   int64
+	Mark int32
 }

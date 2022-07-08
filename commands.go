@@ -26,7 +26,7 @@ func startCommand(update tgbotapi.Update) {
 	bot.Send(StartMessage(update.Message.From.ID))
 }
 
-//Команда создания новго закаща
+//Команда создания новго заказа
 func newOrderCommand(update tgbotapi.Update) {
 	user := readUser(update.Message.From.ID)
 	user.State = MakingOrderUserState

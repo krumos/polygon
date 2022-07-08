@@ -30,6 +30,7 @@ func connectDB(port string, username string, pword string, dbName string) {
 	// defer db.Close()
 }
 
+/*USER_DATA METHODS*/
 func createUser(user *UserData) {
 	exists, _ := db.Model(user).Where("id=?", user.Id).Exists()
 	if !exists {
@@ -53,6 +54,7 @@ func deleteUser(user *UserData) {
 	db.Model(user).Where("id=?", user.Id).Delete()
 }
 
+/*ORDER_DATA METHODS*/
 func createOrder(order *OrderData) {
 	exists, _ := db.Model(order).Where("id=?", order.Id).Exists()
 	if !exists {
@@ -78,7 +80,7 @@ func readConfirmedOrder(duration time.Duration) (orders []OrderData) {
 	currentTime = currentTime.Add(-duration)
 
 	db.Model(&orders).Where("state=? AND confirmation_time<?", ConfirmedOrderState, currentTime).Select()
-	
+
 	//TODO достать из базы все заказы с состоянием ConfirmedOrderState
 	return orders
 }
@@ -91,6 +93,7 @@ func deleteOrder(order *OrderData) {
 	db.Model(order).WherePK().Delete()
 }
 
+/*ORDER_CALLBACK METHODS*/
 func isExistsOrderCallback(orderCallback *OrderCallback) (exsists bool) {
 	exsists, _ = db.Model(orderCallback).Where("responder_id=? AND order_id=?", orderCallback.ResponderId, orderCallback.Id).Exists()
 	return exsists
@@ -101,6 +104,12 @@ func createOrderCallback(orderCallback *OrderCallback) {
 		db.Model(orderCallback).Insert()
 
 	}
+}
+
+func readCallbacksOrder(order *OrderData) (callbacks []OrderCallback) {
+	db.Model(&callbacks).Where("order_id=? AND responder_id!=?", order.Id, order.ExecutorId).Select()
+
+	return callbacks
 }
 
 func readOrderCallback(responderId, orderCallbackId int64) (orderCallback *OrderCallback) {

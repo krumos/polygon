@@ -1,9 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
-	"encoding/json"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -33,22 +34,30 @@ func spamer() {
 				Type: AcceptRating,
 				Id:   order.Id,
 			})
-			
+
 			rejectRatingDataJson, _ := json.Marshal(CallbackRatingData{
-				Type: AcceptRating,
+				Type: RejectRating,
 				Id:   order.Id,
 			})
 
-			checkExecutedOrderMessage := tgbotapi.NewMessage(order.CustomerId, "Ваш заказнейм уже выполнен?")
-			
+			archiveOrderDataJson, _ := json.Marshal(CallbackRatingData{
+				Type: ArchiveOrder,
+				Id:   order.Id,
+			})
+
+			checkExecutedOrderMessage := tgbotapi.NewMessage(order.CustomerId, "Ваш"+" [заказ](https://t.me/krumos/"+fmt.Sprint(order.MessageId)+" уже выполнен?")
+
 			RatingButtonConfig := tgbotapi.NewInlineKeyboardMarkup(
 				tgbotapi.NewInlineKeyboardRow(
 					tgbotapi.NewInlineKeyboardButtonData("Да", string(acceptRatingDataJson)),
 					tgbotapi.NewInlineKeyboardButtonData("Нет", string(rejectRatingDataJson)),
+				),
+				tgbotapi.NewInlineKeyboardRow(
+					tgbotapi.NewInlineKeyboardButtonData("Больше не спрашивать", string(archiveOrderDataJson)),
 				))
 			checkExecutedOrderMessage.ReplyMarkup = RatingButtonConfig
 
-			bot.Send(checkExecutedOrderMessage) 
+			bot.Send(checkExecutedOrderMessage)
 		}
 	}
 }
