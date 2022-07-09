@@ -17,6 +17,7 @@ const (
 	ModeratedOrderState
 	ConfirmedOrderState
 	RejectedOrderState
+	WaitRated
 	ExecutedOrderState
 )
 

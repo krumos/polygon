@@ -113,6 +113,7 @@ func readCallbacksOrder(order *OrderData) (callbacks []OrderCallback) {
 }
 
 func readOrderCallback(responderId, orderCallbackId int64) (orderCallback *OrderCallback) {
+	orderCallback = new(OrderCallback)
 	db.Model(orderCallback).Where("responder_id=? AND order_id=?", responderId, orderCallbackId).Select()
 
 	return orderCallback

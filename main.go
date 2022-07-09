@@ -24,11 +24,13 @@ func connectBot(token string) (updates tgbotapi.UpdatesChannel, err error) {
 
 func spamer() {
 	for {
-		time.Sleep(time.Duration(time.Millisecond * 1000 * 10))
-		orders := readConfirmedOrder(time.Millisecond * 1000 * 10)
+		time.Sleep(time.Duration(time.Millisecond * 1000 * 5))
+		orders := readConfirmedOrder(time.Millisecond * 1000 * 5)
 		fmt.Println(len(orders))
 		for _, order := range orders {
 			fmt.Println(order)
+			order.State = WaitRated
+			updateOrder(&order)
 
 			acceptRatingDataJson, _ := json.Marshal(CallbackRatingData{
 				Type: AcceptRating,
@@ -40,20 +42,12 @@ func spamer() {
 				Id:   order.Id,
 			})
 
-			archiveOrderDataJson, _ := json.Marshal(CallbackRatingData{
-				Type: ArchiveOrder,
-				Id:   order.Id,
-			})
-
 			checkExecutedOrderMessage := tgbotapi.NewMessage(order.CustomerId, "Ваш"+" [заказ](https://t.me/krumos/"+fmt.Sprint(order.MessageId)+") уже выполнен?")
 
 			RatingButtonConfig := tgbotapi.NewInlineKeyboardMarkup(
 				tgbotapi.NewInlineKeyboardRow(
 					tgbotapi.NewInlineKeyboardButtonData("Да", string(acceptRatingDataJson)),
 					tgbotapi.NewInlineKeyboardButtonData("Нет", string(rejectRatingDataJson)),
-				),
-				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonData("Больше не спрашивать", string(archiveOrderDataJson)),
 				))
 			checkExecutedOrderMessage.ReplyMarkup = RatingButtonConfig
 			checkExecutedOrderMessage.ParseMode = tgbotapi.ModeMarkdownV2

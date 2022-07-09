@@ -29,7 +29,7 @@ func responseStateMachine(update tgbotapi.Update, config *Config) {
 	case AcceptRating:
 		acceptRatingOrderResponse(update, &order)
 	case RejectRating:
-		rejectRatingOrderResponse(update)
+		rejectRatingOrderResponse(update, &order)
 	case RatingExecutor:
 		user := readUser(order.ExecutorId)
 		ratingOrderResponse(update, &order, user, ratingExecutor)
@@ -95,9 +95,9 @@ func acceptRatingOrderResponse(update tgbotapi.Update, order *OrderData) {
 	bot.Send(ratingOrderTextMessage)
 }
 
-func rejectRatingOrderResponse(update tgbotapi.Update) {
+func rejectRatingOrderResponse(update tgbotapi.Update, order *OrderData) {
 	bot.Send(tgbotapi.NewDeleteMessage(update.CallbackQuery.From.ID, update.CallbackQuery.Message.MessageID))
-
+	order.State = ConfirmedOrderState
 	bot.Request(tgbotapi.NewCallback(update.CallbackQuery.ID, "Спасибо, мы спросим Вас позже"))
 }
 
@@ -120,6 +120,12 @@ func confirmOrderResponse(update tgbotapi.Update, response *CallbackData, config
 	for _, callback := range callbacks {
 		bot.Send(tgbotapi.NewDeleteMessage(order.CustomerId, callback.MessageId))
 	}
+
+	executorCallback := readOrderCallback(order.ExecutorId, order.Id)
+
+	orderAgreementMessage := tgbotapi.NewEditMessageText(order.CustomerId, executorCallback.MessageId, "Ваш [заказ]("+"https://t.me/krumos/"+fmt.Sprint(order.MessageId)+") выполняется [пользователем](tg://user?id="+fmt.Sprint(order.ExecutorId)+")")
+	orderAgreementMessage.ParseMode = tgbotapi.ModeMarkdownV2
+	bot.Send(orderAgreementMessage)
 }
 
 func getStringCustomerRating(user *UserData) string { // TODO расширение над юзером?
@@ -203,7 +209,8 @@ func аpproveOrderResponse(config *Config, update tgbotapi.Update, response *Cal
 	order.MessageId = m.MessageID
 
 	//Сообщаем заказчику о том что заказ прошел модерацию
-	orderModeratedMessage := tgbotapi.NewMessage(order.CustomerId, Texts["status_sent"])
+	orderModeratedMessage := tgbotapi.NewMessage(order.CustomerId, "Ваш [заказ](https://t.me/krumos/"+fmt.Sprint(order.MessageId)+") успешно прошел модерацию и отправлен в канал")
+	orderModeratedMessage.ParseMode = tgbotapi.ModeMarkdownV2
 	bot.Send(orderModeratedMessage)
 
 	//Удаляем пост из канала модераторов
